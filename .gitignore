@@ -1,0 +1,21 @@
+bin/
+obj/
+.vs/
+*.user
+TestResults/
+coverage*.json
+coverage*.xml
+coverage/
+
+# data and benchmark output are large and reproducible; never commit them
+data/
+results/
+*.parquet
+*.csv
+!tests/**/*.csv
+
+# python
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
