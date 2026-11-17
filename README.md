@@ -2,101 +2,61 @@
 
 CPSC 4660 · Group 5 · Logan Buye, Ryan Thibault, Cole Mcritchie, Josshua Balita
 
-We build a column store from scratch in C# (.NET 8) that follows Abadi, Madden and Ferreira (SIGMOD 2006), then measure
-it on NYC taxi data. The point to prove: **a column store that compresses its data and runs queries directly on the
-compressed form beats decompressing first, and beats a row store.**
+A column store written from scratch in C# (.NET 8), based on Abadi, Madden and Ferreira (SIGMOD 2006). We test it on
+NYC taxi data and check one claim: **queries run faster directly on compressed data than after decompressing it, and
+faster than a row store.**
+
+## Dates
 
 | Date | What |
 |---|---|
-| **Nov 27** | All benchmarks finished |
-| **Dec 4** | Final report and code due |
-| **Dec 8** | Class demo |
+| Nov 19 | Open decisions settled ([docs/DECISIONS.md](docs/DECISIONS.md)) |
+| Nov 23 | Parts built |
+| Nov 25 | Q1 to Q4 give the same answers on all four configurations |
+| **Nov 27** | Benchmarks finished |
+| **Dec 4** | Report and code due |
+| Dec 8 | Demo |
 
 ## Who does what
 
-> These roles are a proposal. Swap names freely, but every role needs exactly one owner.
+Each task is a GitHub issue with one owner. Find yours under [Issues](../../issues) by its `role` label.
+The names are a proposal, so swap them if you want.
 
-| Role | Owner | Builds | Done when |
+| Role | Owner | Builds | Report section |
 |---|---|---|---|
-| **A. Storage** | Logan | Column file format, chunked column files, bytes-read counter, position lists, scan and filter operator | A column can be written to disk, read back block by block, and the bytes read are counted |
-| **B. Bit-vector and filters** | Ryan | `BitVectorEncoder` and its block, equality filter that returns a bitstring, position-list AND (for Q3) | Passes `EncoderContractTests`; `WHERE x = v` on a bit-vector column never touches rows |
-| **C. Dictionary and GROUP BY** | Cole | `DictionaryEncoder` and its block, COUNT/SUM with GROUP BY in eager and direct modes | Passes `EncoderContractTests`; Q1 and Q4 answers match plain LINQ in both modes |
-| **D. Data, baseline and benchmarks** | Josshua | Python data prep, synthetic generator, row store, benchmark driver, plots | `results/*.csv` for all four configurations, plus the charts |
+| **A. Storage** | Logan | Column files on disk, bytes-read counter, scan and filter | Implementation (storage) |
+| **B. Bit-vector** | Ryan | Bit-vector encoding, equality filter, combining filters | Implementation (bit-vector), results for Q2 and Q3 |
+| **C. Dictionary** | Cole | Dictionary encoding, COUNT/SUM with GROUP BY | Implementation (dictionary), results for Q1 and Q4 |
+| **D. Data and benchmarks** | Josshua | Data prep, row store, four configurations, benchmark driver, plots | Evaluation, results, conclusions |
 
-Already done and available as a template: `RleEncoder`, `UncompressedEncoder`, `Aggregates` (sum and count in both
-modes), and the shared test suite. Copy their style.
+Everyone also writes their own **summary** of the paper (report section 1) and reviews teammates' pull requests.
 
-## What each person hands in
+**Already done:** RLE and uncompressed encoders, sum and count, shared tests. Copy their style.
 
-Each role has **code** (merged to `main` with tests), and **material for the final report**. The report needs six
-things: summary, implementation details, evaluation strategy, results and analysis, conclusions, and the code.
-See [docs/REPORT_GUIDE.md](docs/REPORT_GUIDE.md) for the page budget and the full outline.
+**Which files you may edit:** [docs/OWNERSHIP.md](docs/OWNERSHIP.md). If you need a change in someone else's file,
+ask them in their issue.
 
-### A. Storage (Logan)
-- [ ] `ColumnWriter` / `ColumnReader`: one file per column, fixed-size chunks, a small header per chunk (encoding, value count, start position)
-- [ ] Bytes-read counter around the file stream, used by every query
-- [ ] Position-list type, and a scan/filter operator that works on any encoding
-- [ ] Tests: write then read gives the same column; counter matches file size on a full scan; corrupt header is rejected
-- [ ] **Report input:** the file layout diagram, why chunks, how bytes read is measured, how the cold-cache run is done on Windows (see [docs/DECISIONS.md](docs/DECISIONS.md))
-- [ ] **Report section owned:** 2. Implementation details (storage part)
+## How to work
 
-### B. Bit-vector and filters (Ryan)
-- [ ] `BitVectorEncoder`: one bitstring per distinct value, one non-contiguous block per value (as in the paper)
-- [ ] Equality filter that returns that value's bitstring without decompressing; `BAnd` for combining filters
-- [ ] Tests: add `BitVectorEncoderContractTests`; shortcut test that proves the filter never calls `AsArray`
-- [ ] **Report input:** a worked example of the encoding, when it wins and loses (the paper: great for WHERE, slow when the column must be read in position order), your measured numbers for Q2 and Q3
-- [ ] **Report section owned:** 2. Implementation details (bit-vector and filters), part of 4. Results (Q2, Q3)
+1. Pick your issue and make a branch: `git switch -c yourname/topic`
+2. Build it in small commits.
+3. Run `.\scripts\check.ps1` before you push. If the format step fails, run `dotnet format`.
+4. Open a pull request that says `Closes #issue-number`. Tests must pass and Josshua reviews and merges.
+5. Never commit data, CSVs or results.
 
-### C. Dictionary and GROUP BY (Cole)
-- [ ] `DictionaryEncoder`: pick bits per code from the distinct count, bit-pack codes (decide packing rule in [docs/DECISIONS.md](docs/DECISIONS.md))
-- [ ] COUNT and SUM with GROUP BY, eager mode and direct mode, hash table or array keyed by group value
-- [ ] Tests: add `DictionaryEncoderContractTests`; GROUP BY results equal a LINQ `GroupBy` on all ten datasets
-- [ ] **Report input:** the dictionary layout and packing rule, how the direct GROUP BY avoids decompression, measured results for Q1 and Q4
-- [ ] **Report section owned:** 2. Implementation details (dictionary and operators), part of 4. Results (Q1, Q4)
-
-### D. Data, baseline and benchmarks (Josshua)
-- [ ] `python/prep_taxi.py`: read 10 to 12 months of Parquet, drop invalid rows, money to integer cents, pickup datetime to day number, write CSV
-- [ ] `python/gen_synthetic.py`: integer columns with chosen distinct count (2 to 100,000) and average run length (1 to 1,000)
-- [ ] Row store (fixed-width records, sequential scan) and the benchmark driver: 4 configurations x Q1 to Q4, median of 5 runs, cold and warm, CSV out
-- [ ] Equivalence test: all four configurations return identical answers for every query
-- [ ] `python/plot.py` (matplotlib) for the report figures
-- [ ] Add a Python job to CI once `python/` has tests
-- [ ] **Report input:** dataset description (rows, columns, cleaning rules), the evaluation setup and metrics, all result figures
-- [ ] **Report sections owned:** 3. Evaluation strategy, 4. Results (figures and sensitivity tests), 5. Conclusions (with everyone)
-
-### Everyone
-- [ ] Summary (report section 1) in your own words, from your reading of the paper
-- [ ] Review at least one teammate's pull request each week
-- [ ] A short README note for anything you built that others must run
-
-## Quick start
+## Run it
 
 ```powershell
 dotnet build
 dotnet test
-dotnet run --project src/ColumnStore.Bench -- 100    # smoke run, argument = average run length
-.\scripts\check.ps1                                   # every CI gate, run before each push
+dotnet run --project src/ColumnStore.Bench -- 100    # smoke run
 ```
 
 Needs the .NET 8 SDK or newer.
 
-## Working together
+## More
 
-1. `git switch -c yourname/short-topic`, make small commits.
-2. Run `.\scripts\check.ps1`. If the format step fails, run `dotnet format` and commit.
-3. Push and open a pull request. CI must be green and one teammate must approve before you merge.
-4. Never commit data, CSVs or results. They are in `.gitignore` on purpose.
-
-More: [docs/DEVELOPING.md](docs/DEVELOPING.md) (how to add an encoder), [docs/DECISIONS.md](docs/DECISIONS.md)
-(open choices to settle this week), [docs/REPORT_GUIDE.md](docs/REPORT_GUIDE.md) (report outline).
-
-## Layout
-
-| Path | Purpose |
-|---|---|
-| `src/ColumnStore.Core` | Encoders, compression blocks, operators, storage |
-| `src/ColumnStore.Bench` | Benchmark driver (smoke run for now) |
-| `tests/ColumnStore.Tests` | Unit tests and the shared encoder contract |
-| `python/` | Data prep and plotting (to be added by role D) |
-| `docs/` | Developer notes, decisions, report guide |
-| `scripts/check.ps1` | Runs every CI gate locally |
+- [docs/DEVELOPING.md](docs/DEVELOPING.md): how to add an encoder
+- [docs/REPORT_GUIDE.md](docs/REPORT_GUIDE.md): what goes in the report
+- [docs/DECISIONS.md](docs/DECISIONS.md): choices to settle this week
+- [docs/OWNERSHIP.md](docs/OWNERSHIP.md): who owns which files

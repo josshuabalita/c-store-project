@@ -23,6 +23,12 @@ RAMMap to clear the standby list, or reboot between runs.
 
 Decision: _not yet made_
 
+## 5. Units for trip_distance
+Money is stored as integer cents. Distance is a decimal in miles. Suggestion: store hundredths of a mile as an integer.
+`IQueryConfiguration` already assumes this.
+
+Decision: _not yet made_
+
 ## 4. Chunk size
 Rows per chunk in a column file. Smaller chunks mean more headers; larger chunks mean more memory per read.
 Starting suggestion: 65,536 rows.
