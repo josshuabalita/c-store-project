@@ -22,7 +22,7 @@ public sealed class ArrayPositionList : IPositionList
 
     public int[] ToArray() => (int[])_positions.Clone();
 
-    public IPositionList And(IPositionList other)
+    public IPositionList Intersect(IPositionList other)
     {
         var right = other.ToArray();
         var result = new List<int>();

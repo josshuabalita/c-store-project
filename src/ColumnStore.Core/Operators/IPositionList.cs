@@ -9,5 +9,5 @@ public interface IPositionList
     int[] ToArray();
 
     /// <summary>Positions that are in both lists.</summary>
-    IPositionList And(IPositionList other);
+    IPositionList Intersect(IPositionList other);
 }
